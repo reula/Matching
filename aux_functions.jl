@@ -51,7 +51,7 @@ function RK4_Step!(f,y0,t0,h,p_f,par_RK)
     k2 = h*f(k2,y0+0.5*k1, t0+0.5*h,p_f)
     k3 = h*f(k3,y0+0.5*k2, t0+0.5*h,p_f)
     k4 = h*f(k4,y0+k3, t0+h,p_f)
-    y0 .= y0 + (k1 + 2k2 + 2k3 + k4)/6
+    y0 = y0 + (k1 + 2k2 + 2k3 + k4)/6
     return y0
 end
 
@@ -84,23 +84,23 @@ function F!(du,u,t,p_F)
     p_get = Nl, dl, Nr, dr
     par_Dx_r = (Nr, dr)
     par_Dx_l = (Nl, dl)
-    ϕ = view(u,1:Nl)
+    ϕ_L = view(u,1:Nl)
     vp = view(u,Nl+1:2Nl)
     vm = view(u,2Nl+1:3Nl)
-    ϕ_R = view(u,3Nl+1,3Nl+Nr)
-    S = view(u,3Nl+Nr+1,3Nl+2Nr)
-    W = view(u,3Nl+2Nr+1,3Nl+3Nr)
-    dϕ = view(du,1:Nl)
+    ϕ_R = view(u,3Nl+1:3Nl+Nr)
+    S = view(u,3Nl+Nr+1:3Nl+2Nr)
+    W = view(u,3Nl+2Nr+1:3Nl+3Nr)
+    dϕ_L = view(du,1:Nl)
     dvp = view(du,Nl+1:2Nl)
     dvm = view(du,2Nl+1:3Nl)
-    dϕ_R = view(du,3Nl+1,3Nl+Nr)
-    dS = view(du,3Nl+Nr+1,3Nl+2Nr)
-    dW = view(du,3Nl+2Nr+1,3Nl+3Nr)
+    dϕ_R = view(du,3Nl+1:3Nl+Nr)
+    dS = view(du,3Nl+Nr+1:3Nl+2Nr)
+    dW = view(du,3Nl+2Nr+1:3Nl+3Nr)
     dϕ_R = (vp+vm)/2
     dvp = D4x_SBP_ts(vp,par_Dx_l,Qd) + ρ_L
     dvm = -D4x_SBP_ts(vm,par_Dx_l,Qd) + ρ_L
     dϕ_L = (S+W)/2
-    dS = D4x_SBP_ts(S,par_Dx_l,Qd)/2 + ρ_R/2
-    get_W_R!(W,ϕ_R,ρ_R,vm[end],p_get)
-    return du[:]
+    dS = D4x_SBP_ts(S,par_Dx_r,Qd)/2 + ρ_R/2
+    get_W!(W,ϕ_R,ρ_R,vm[end],p_get)
+    return [dϕ_R;dvp;dvm;dϕ_L;dS;dW]
 end
