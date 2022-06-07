@@ -109,6 +109,7 @@ function F!(du,u,t,p_F)
     dϕ_R = view(du,3Nl+1:3Nl+Nr)
     dS = view(du,3Nl+Nr+1:3Nl+2Nr)
     dW = view(du,3Nl+2Nr+1:3Nl+3Nr)
+    #start the real equations 
     dϕ_L = (vp+vm)/2
     dvp = D4x_SBP_ts(vp,par_Dx_l,Qd) + ρ_L
     dvm = -D4x_SBP_ts(vm,par_Dx_l,Qd) + ρ_L
@@ -143,3 +144,25 @@ function bump_x(x,x0,x1,p,A) #x derivative of b
     end
 end
 #plot(x->bump(x,1,2,4,1)) #checked ok
+
+function get_data(file_name, coarse_factor=1)
+    i = coarse_factor
+    data = load(file_name)
+    run_name = data["run_name"]
+    @show (x0,x1,p_bump,A) = data["par_init"]
+    @show (Nl, L, dl, Nr, R, dr) = data["par_grid"]
+    @show (t_i, t_f, M, dt, M_d, dt_d) = data["par_evolv"]
+    r = [L + dr*(i-1) for i in 1:2^(i-1):Nr]
+    l = [L + dr*(i-1) for i in 1:2^(i-1):Nl]
+    t = [dt_d*(i-1) for i in 1:2^(i-1):M_d]
+    u = [dt_d*(i-1) for i in 1:2^(i-1):M_d]
+
+    v = zeros(3Nl+3Nr,M_d)
+    for j in 1:M_d
+        tiempo = @sprintf("%05d", j)
+        v[:,j] = data["u/u_$tiempo"]
+    end
+    return (data["par_grid"], data["par_evolv"], r, l, t, u, v)
+ 
+end
+
