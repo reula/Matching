@@ -81,7 +81,7 @@ Function to integrate W along u=constant,
 the initial value is vm at the last point on the left
 """
 function get_W!(W,ϕ_R,ρ_R,vm0,p_get)
-    Nl, dl, Nr, dr = p_get
+    Nr, dr = p_get
     W[1] = vm0
     for i in 1:(Nr-1)
         W[i+1] = W[i] + ρ_R[i]*dr/2 
@@ -90,11 +90,11 @@ function get_W!(W,ϕ_R,ρ_R,vm0,p_get)
 end
 
 """
-The evolution ecuation
+The evolution equation
 """
 function F!(du,u,t,p_F)
     Nl, dl, Nr, dr, ρ_L, ρ_R = p_F
-    p_get = Nl, dl, Nr, dr
+    p_get = Nr, dr
     par_Dx_r = (Nr, dr)
     par_Dx_l = (Nl, dl)
     ϕ_L = view(u,1:Nl)
@@ -123,6 +123,31 @@ function F!(du,u,t,p_F)
     dvm[1] += σ*(vp[1]-vm[1]) # make ϕ_x = 0 at origin
     dS[end] += -σ*S[end] # nothing enters from the far rigth
     return [dϕ_L;dvp;dvm;dϕ_R;dS;dW][:]
+    #return du[:]
+end
+
+"""
+The evolution equation for the cone case
+"""
+function Fcone!(du,u,t,p_F)
+    Nr, dr, ρ_R = p_F
+    p_get = Nr, dr
+    par_Dx_r = (Nr, dr)
+    ϕ_R = view(u,1:Nr)
+    S = view(u,Nr+1:2Nr)
+    W = view(u,2Nr+1:3Nr)
+    dϕ_R = view(du,1:Nr)
+    dS = view(du,Nr+1:2Nr)
+    dW = view(du,2Nr+1:3Nr)
+    #start the real equations 
+    dϕ_R = (S+W)/2
+    dS = D4x_SBP_ts(S,par_Dx_r,Qd)/2 + ρ_R/2
+    get_W!(W,ϕ_R,ρ_R,S[1],p_get) # this updates as an integral
+    # Penalties
+    h_00 = 17/48
+    σ = 1/2/h_00/dr
+    dS[end] += -σ*S[end] # nothing enters from the far rigth
+    return [dϕ_R;dS;dW][:]
     #return du[:]
 end
 
@@ -157,7 +182,7 @@ function get_data(file_name, coarse_factor=1)
     t = [dt_d*(i-1) for i in 1:2^(i-1):M_d]
     u = [dt_d*(i-1) for i in 1:2^(i-1):M_d]
 
-    v = zeros(3Nl+3Nr,M_d)
+    v = zeros(3Nr,M_d)
     for j in 1:M_d
         tiempo = @sprintf("%05d", j)
         v[:,j] = data["u/u_$tiempo"]
